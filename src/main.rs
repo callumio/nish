@@ -32,7 +32,6 @@ fn preprocess(s: &str) -> Result<Installable, String> {
 #[tokio::main]
 async fn main() -> Result<(), runix::default::NixCommandLineRunError> {
     let cli = Args::parse();
-    dbg!(&cli.pkgs);
     Shell {
         flake: FlakeArgs::default(),
         eval: EvaluationArgs::default(),
