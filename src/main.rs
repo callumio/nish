@@ -17,7 +17,7 @@ struct Args {
     /// <package> to implicitly use nixpkgs
     ///
     /// <flake#package> to use a different flake
-    #[arg(value_parser = preprocess)]
+    #[arg(value_parser = preprocess, required = true)]
     pkgs: Vec<Installable>,
 }
 
