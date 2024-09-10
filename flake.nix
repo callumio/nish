@@ -73,4 +73,9 @@
           };
         }
     );
+
+  nixConfig = {
+    extra-substituters = ["callumio-public.cachix.org"];
+    extra-trusted-public-keys = ["callumio-public.cachix.org-1:VucOSl7vh44GdqcILwMIeHlI0ufuAnHAl8cO1U/7yhg="];
+  };
 }
