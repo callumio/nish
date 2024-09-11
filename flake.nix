@@ -19,6 +19,11 @@
 
     treefmt-nix.url = "github:numtide/treefmt-nix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
+
+    pre-commit-hooks = {
+      url = "github:cachix/pre-commit-hooks.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
   outputs = {
     self,
@@ -28,11 +33,16 @@
   } @ inputs:
     flake-parts.lib.mkFlake {inherit self inputs;} {
       systems = import inputs.systems;
+      imports = [
+        inputs.pre-commit-hooks.flakeModule
+        inputs.treefmt-nix.flakeModule
+      ];
 
       perSystem = {
         pkgs,
         inputs',
         self',
+        config,
         ...
       }: let
         rustToolchain = inputs'.fenix.packages.fromToolchainFile {
@@ -74,7 +84,26 @@
 
         devShells.default = craneLib.devShell {
           inherit (self') checks;
+          inputsFrom = [config.pre-commit.devShell config.treefmt.build.devShell];
           packages = [];
+        };
+
+        pre-commit = {
+          check.enable = false;
+          settings.hooks = {
+            alejandra.enable = true;
+            deadnix.enable = true;
+            rustfmt.enable = true;
+          };
+        };
+
+        treefmt.config = {
+          projectRootFile = "flake.nix";
+          programs = {
+            alejandra.enable = true;
+            deadnix.enable = true;
+            rustfmt.enable = true;
+          };
         };
       };
     };
