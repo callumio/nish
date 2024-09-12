@@ -6,7 +6,7 @@
     flake-parts.inputs.nixpkgs-lib.follows = "nixpkgs";
 
     fenix.inputs.nixpkgs.follows = "nixpkgs";
-    fenix.url = "github:nix-community/fenix/pull/163/head";
+    fenix.url = "github:nix-community/fenix";
 
     crane.url = "github:ipetkov/crane";
 
