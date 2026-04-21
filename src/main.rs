@@ -37,7 +37,6 @@ fn preprocess(s: &str) -> Result<Installable, String> {
 async fn main() -> Result<(), runix::default::NixCommandLineRunError> {
     let cli = Args::parse();
     std::env::set_var("NIXPKGS_ALLOW_UNFREE", "1");
-
     Shell {
         flake: FlakeArgs::default(),
         eval: EvaluationArgs {

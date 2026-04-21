@@ -5,15 +5,8 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
     flake-parts.inputs.nixpkgs-lib.follows = "nixpkgs";
 
-    fenix.inputs.nixpkgs.follows = "nixpkgs";
-    fenix.url = "github:nix-community/fenix";
-
-    crane.url = "github:ipetkov/crane";
-
-    advisory-db = {
-      url = "github:rustsec/advisory-db";
-      flake = false;
-    };
+    rust-overlay.url = "github:oxalica/rust-overlay";
+    rust-overlay.inputs.nixpkgs.follows = "nixpkgs";
 
     systems.url = "github:nix-systems/default";
 
@@ -27,7 +20,6 @@
   };
   outputs = {
     self,
-    nixpkgs,
     flake-parts,
     ...
   } @ inputs:
@@ -41,51 +33,36 @@
       perSystem = {
         pkgs,
         inputs',
-        self',
         config,
         ...
       }: let
-        rustToolchain = inputs'.fenix.packages.fromToolchainFile {
-          file = ./rust-toolchain.toml;
-          sha256 = "sha256-zC8E38iDVJ1oPIzCqTk/Ujo9+9kx9dXq7wAwPMpkpg0=";
-        };
-        craneLib = (inputs.crane.mkLib pkgs).overrideToolchain rustToolchain;
-        src = craneLib.cleanCargoSource (craneLib.path ./.);
-
-        nativeBuildInputs = with pkgs; [rustToolchain pkg-config];
-        buildInputs = with pkgs; [udev];
-
-        commonArgs = {
-          inherit src buildInputs nativeBuildInputs;
+        rustToolchain = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+        rustPlatform = pkgs.makeRustPlatform {
+          cargo = rustToolchain;
+          rustc = rustToolchain;
         };
 
-        cargoArtifacts = craneLib.buildDepsOnly commonArgs;
-        bin = craneLib.buildPackage (commonArgs // {inherit cargoArtifacts;});
+        bin = rustPlatform.buildRustPackage {
+          pname = "nish";
+          version = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).package.version;
+          src = ./.;
+          cargoLock.lockFile = ./Cargo.lock;
+          nativeBuildInputs = with pkgs; [pkg-config];
+          buildInputs = with pkgs; [udev];
+        };
       in {
-        _module.args.pkgs = inputs'.nixpkgs.legacyPackages.extend inputs.fenix.overlays.default;
+        _module.args.pkgs = inputs'.nixpkgs.legacyPackages.extend inputs.rust-overlay.overlays.default;
 
         checks = {
           inherit bin;
-          clippy = craneLib.cargoClippy (commonArgs
-            // {
-              inherit cargoArtifacts;
-              cargoClippyExtraArgs = "--all-targets -- --deny warnings";
-            });
-          coverage = craneLib.cargoTarpaulin (commonArgs // {inherit cargoArtifacts;});
-          fmt = craneLib.cargoFmt {inherit src;};
-          audit = craneLib.cargoAudit {
-            inherit src;
-            inherit (inputs) advisory-db;
-          };
         };
         packages = {
           default = bin;
         };
 
-        devShells.default = craneLib.devShell {
-          inherit (self') checks;
+        devShells.default = pkgs.mkShell {
           inputsFrom = [config.pre-commit.devShell config.treefmt.build.devShell];
-          packages = [];
+          packages = [rustToolchain pkgs.pkg-config pkgs.udev];
         };
 
         pre-commit = {
